@@ -118,8 +118,9 @@ class _ImagePickerScreenState extends State<ImagePickerScreen> {
                     ElevatedButton.icon(
                       style: currentPromptIndex == 0
                           ? ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green,
-                              foregroundColor: Colors.white,
+                              backgroundColor: Theme.of(
+                                context,
+                              ).colorScheme.onPrimary,
                             )
                           : null,
                       onPressed: () {
@@ -137,8 +138,9 @@ class _ImagePickerScreenState extends State<ImagePickerScreen> {
                     ElevatedButton.icon(
                       style: currentPromptIndex == 1
                           ? ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green,
-                              foregroundColor: Colors.white,
+                              backgroundColor: Theme.of(
+                                context,
+                              ).colorScheme.onPrimary,
                             )
                           : null,
                       onPressed: () {
@@ -150,14 +152,15 @@ class _ImagePickerScreenState extends State<ImagePickerScreen> {
                         });
                       },
                       icon: Icon(Icons.shopping_bag),
-                      label: Text("Producto"),
+                      label: Text("Analizar productos"),
                     ),
                     SizedBox(width: 10),
                     ElevatedButton.icon(
                       style: currentPromptIndex == 2
                           ? ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green,
-                              foregroundColor: Colors.white,
+                              backgroundColor: Theme.of(
+                                context,
+                              ).colorScheme.onPrimary,
                             )
                           : null,
                       onPressed: () {

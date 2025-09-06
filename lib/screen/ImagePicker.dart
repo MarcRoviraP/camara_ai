@@ -1,5 +1,4 @@
 import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
@@ -19,21 +18,33 @@ class _ImagePickerScreenState extends State<ImagePickerScreen> {
   String _aiResult = '';
   bool _isLoading = false;
   int currentPromptIndex = 0;
+  final TextEditingController _textController = TextEditingController();
+
   TextPart prompt = TextPart(
-    "Analiza detalladamente la imagen proporcionada. Si contiene texto, resume los mensajes principales de forma clara y concisa, citando frases clave si son relevantes. Si no hay texto, describe los elementos visuales, su contexto y posibles interpretaciones. Sé preciso y objetivo.",
+    "Analiza detalladamente la imagen proporcionada. Si contiene texto, resume los mensajes principales...",
   );
+
   final ImagePicker _picker = ImagePicker();
-  final model = GenerativeModel(
-    model: 'gemini-2.5-flash',
-    apiKey: dotenv.env['GEMINI_API_KEY'] ?? '',
-  );
+
+  late final GenerativeModel model;
+  late ChatSession chat; // mantiene el contexto
+
+  @override
+  void initState() {
+    super.initState();
+    model = GenerativeModel(
+      model: 'gemini-2.5-flash',
+      apiKey: dotenv.env['GEMINI_API_KEY'] ?? '',
+    );
+    chat = model.startChat(); // inicializar chat
+  }
 
   Future<void> _pickImage(ImageSource source) async {
     final pickedFile = await _picker.pickImage(source: source);
     if (pickedFile != null) {
       setState(() {
         _imageFile = File(pickedFile.path);
-        _aiResult = ''; // Limpiar resultado previo
+        _aiResult = '';
       });
     }
   }
@@ -47,13 +58,12 @@ class _ImagePickerScreenState extends State<ImagePickerScreen> {
     });
 
     final imageBytes = await _imageFile!.readAsBytes();
-
     final imagePart = DataPart('image/jpeg', imageBytes);
 
     try {
-      final response = await model.generateContent([
+      final response = await chat.sendMessage(
         Content.multi([prompt, imagePart]),
-      ]);
+      );
 
       final output = response.text ?? "No se obtuvo respuesta de Gemini.";
       setState(() {
@@ -66,12 +76,60 @@ class _ImagePickerScreenState extends State<ImagePickerScreen> {
         _isLoading = false;
       });
     }
+    _imageFile = null;
+  }
+
+  /// Continuar conversación, enviando siempre imagen y texto aunque la imagen no haya cambiado
+  Future<void> _continueConversation(String text) async {
+    setState(() {
+      _isLoading = true;
+      _aiResult = '';
+    });
+
+    try {
+      if (_imageFile != null) {
+        final imageBytes = await _imageFile!.readAsBytes();
+        final imagePart = DataPart('image/jpeg', imageBytes);
+        final response = await chat.sendMessage(
+          Content.multi([TextPart(text), imagePart]),
+        );
+        final output = response.text ?? "⚠️ Sin respuesta de Gemini.";
+        setState(() {
+          _aiResult = output;
+          _isLoading = false;
+        });
+      } else {
+        // Si no hay imagen, solo envía el texto
+        final response = await chat.sendMessage(Content.text(text));
+        final output = response.text ?? "⚠️ Sin respuesta de Gemini.";
+        setState(() {
+          _aiResult = output;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _aiResult = "❌ Error al continuar conversación:\n$e";
+        _isLoading = false;
+      });
+    }
+    _imageFile = null;
+  }
+
+  /// Cambia la imagen actual por una nueva seleccionada de la galería
+  Future<void> _refreshNewImage() async {
+    final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile == null) return;
+
+    setState(() {
+      _imageFile = File(pickedFile.path);
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('')),
+      appBar: AppBar(title: const Text('Analizador con IA')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -93,6 +151,8 @@ class _ImagePickerScreenState extends State<ImagePickerScreen> {
                     ),
             ),
             const SizedBox(height: 20),
+
+            /// Botones de cámara y galería
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
@@ -108,12 +168,14 @@ class _ImagePickerScreenState extends State<ImagePickerScreen> {
                 ),
               ],
             ),
+
             const SizedBox(height: 20),
+
+            /// Botones de prompts
             if (_imageFile != null)
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     ElevatedButton.icon(
                       style: currentPromptIndex == 0
@@ -125,16 +187,16 @@ class _ImagePickerScreenState extends State<ImagePickerScreen> {
                           : null,
                       onPressed: () {
                         prompt = TextPart(
-                          "Analiza detalladamente la imagen proporcionada. Si contiene texto, resume los mensajes principales de forma clara y concisa, citando frases clave si son relevantes. Si no hay texto, describe los elementos visuales, su contexto y posibles interpretaciones. Sé preciso y objetivo.",
+                          "Analiza la imagen. Si tiene texto, resume los mensajes principales y cita frases clave. Si no, describe los elementos visuales, contexto e interpretaciones posibles de manera precisa y objetiva.",
                         );
                         setState(() {
                           currentPromptIndex = 0;
                         });
                       },
-                      icon: Icon(Icons.image_search),
-                      label: Text("Analizar imagen"),
+                      icon: const Icon(Icons.image_search),
+                      label: const Text("Analizar imagen"),
                     ),
-                    SizedBox(width: 10),
+                    const SizedBox(width: 10),
                     ElevatedButton.icon(
                       style: currentPromptIndex == 1
                           ? ElevatedButton.styleFrom(
@@ -145,16 +207,16 @@ class _ImagePickerScreenState extends State<ImagePickerScreen> {
                           : null,
                       onPressed: () {
                         prompt = TextPart(
-                          "Observa esta imagen e identifica los productos que aparecen, describiendo sus características visibles (tipo, color, forma, material, marca, etiquetas u otros detalles distintivos) y cualquier texto asociado. Si puedes reconocer alguno, busca información adicional como precios estimados, tiendas donde puede comprarse, valoraciones de usuarios o usos comunes. Si los productos no son claramente identificables por baja calidad, ángulo, iluminación o falta de detalles, indícalo explícitamente y sugiere subir una imagen más clara o desde otro ángulo. No generes análisis si no estás seguro de la identidad del producto.",
+                          "Identifica los productos en la imagen y describe sus características visibles (tipo, color, forma, material, marca, etiquetas, etc.) y cualquier texto. Si es posible, proporciona información adicional como precios estimados o tiendas. Si los productos no son claros, indícalo y sugiere una imagen más nítida. No adivines si no estás seguro.",
                         );
                         setState(() {
                           currentPromptIndex = 1;
                         });
                       },
-                      icon: Icon(Icons.shopping_bag),
-                      label: Text("Analizar productos"),
+                      icon: const Icon(Icons.shopping_bag),
+                      label: const Text("Analizar productos"),
                     ),
-                    SizedBox(width: 10),
+                    const SizedBox(width: 10),
                     ElevatedButton.icon(
                       style: currentPromptIndex == 2
                           ? ElevatedButton.styleFrom(
@@ -165,19 +227,42 @@ class _ImagePickerScreenState extends State<ImagePickerScreen> {
                           : null,
                       onPressed: () {
                         prompt = TextPart(
-                          "Explica detalladamente el siguiente texto extraído de una imagen. Describe su significado, propósito, contexto posible y cualquier término relevante que pueda requerir aclaración. Si se trata de un documento formal, publicitario, técnico o educativo, indícalo. Usa un lenguaje claro y estructurado para facilitar la comprensión.",
+                          "Identifica los animales en la imagen y describe sus características (tipo, color, forma, tamaño, comportamiento, hábitat, etc.) y cualquier texto. Si reconoces alguno, agrega información relevante como nombres, hábitats o curiosidades. Indica si se puede cazar/pescar. Si no son claros, menciona que la imagen no permite identificar y sugiere otra más clara.",
                         );
                         setState(() {
                           currentPromptIndex = 2;
                         });
                       },
-                      icon: Icon(Icons.text_snippet),
-                      label: Text("Buscar texto"),
+                      icon: const Icon(Icons.pets),
+                      label: const Text("Analizar animales"),
+                    ),
+                    const SizedBox(width: 10),
+                    ElevatedButton.icon(
+                      style: currentPromptIndex == 3
+                          ? ElevatedButton.styleFrom(
+                              backgroundColor: Theme.of(
+                                context,
+                              ).colorScheme.onPrimary,
+                            )
+                          : null,
+                      onPressed: () {
+                        prompt = TextPart(
+                          "Analiza el texto extraído de la imagen. Explica su significado, propósito, contexto y términos importantes. Indica si es un documento formal, publicitario, técnico o educativo. Usa un lenguaje claro y estructurado.",
+                        );
+                        setState(() {
+                          currentPromptIndex = 3;
+                        });
+                      },
+                      icon: const Icon(Icons.text_snippet),
+                      label: const Text("Buscar texto"),
                     ),
                   ],
                 ),
               ),
+
             const SizedBox(height: 20),
+
+            /// Botón buscar con IA
             ElevatedButton.icon(
               onPressed: _imageFile == null || _isLoading
                   ? null
@@ -189,7 +274,9 @@ class _ImagePickerScreenState extends State<ImagePickerScreen> {
                 foregroundColor: Colors.white,
               ),
             ),
+
             const SizedBox(height: 30),
+
             if (_isLoading)
               Center(
                 child: SpinKitSpinningLines(
@@ -197,6 +284,7 @@ class _ImagePickerScreenState extends State<ImagePickerScreen> {
                   size: 100.0,
                 ),
               ),
+
             if (_aiResult.isNotEmpty) ...[
               const Divider(),
               const Align(
@@ -208,6 +296,35 @@ class _ImagePickerScreenState extends State<ImagePickerScreen> {
               ),
               const SizedBox(height: 10),
               MarkdownBody(data: _aiResult, selectable: true),
+
+              const SizedBox(height: 20),
+
+              /// Input de texto + enviar y botón nueva imagen
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _textController,
+                      decoration: const InputDecoration(
+                        hintText: "Escribe un mensaje para continuar...",
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.send),
+                    onPressed: () {
+                      final text = _textController.text;
+                      _textController.clear();
+                      if (text.isNotEmpty) _continueConversation(text);
+                    },
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.add_photo_alternate),
+                    tooltip: "Recargar imagen",
+                    onPressed: _refreshNewImage,
+                  ),
+                ],
+              ),
             ],
           ],
         ),

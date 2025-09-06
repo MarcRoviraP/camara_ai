@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -5,6 +6,36 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+class ChatMessageData {
+  final String role; // "user" o "assistant"
+  final String content; // texto o ruta de imagen
+  final bool isImage;
+  final DateTime timestamp;
+
+  ChatMessageData({
+    required this.role,
+    required this.content,
+    this.isImage = false,
+    required this.timestamp,
+  });
+
+  Map<String, dynamic> toJson() => {
+    'role': role,
+    'content': content,
+    'isImage': isImage,
+    'timestamp': timestamp.toIso8601String(),
+  };
+
+  factory ChatMessageData.fromJson(Map<String, dynamic> json) =>
+      ChatMessageData(
+        role: json['role'],
+        content: json['content'],
+        isImage: json['isImage'] ?? false,
+        timestamp: DateTime.parse(json['timestamp']),
+      );
+}
 
 class ImagePickerScreen extends StatefulWidget {
   const ImagePickerScreen({super.key});
@@ -19,6 +50,7 @@ class _ImagePickerScreenState extends State<ImagePickerScreen> {
   bool _isLoading = false;
   int currentPromptIndex = 0;
   final TextEditingController _textController = TextEditingController();
+  List<ChatMessageData> historial = [];
 
   TextPart prompt = TextPart(
     "Analiza detalladamente la imagen proporcionada. Si contiene texto, resume los mensajes principales...",
@@ -37,6 +69,36 @@ class _ImagePickerScreenState extends State<ImagePickerScreen> {
       apiKey: dotenv.env['GEMINI_API_KEY'] ?? '',
     );
     chat = model.startChat(); // inicializar chat
+    _cargarHistorial();
+  }
+
+  Future<void> _guardarHistorial() async {
+    final prefs = await SharedPreferences.getInstance();
+    final jsonList = historial.map((msg) => msg.toJson()).toList();
+    prefs.setString('chat_historial', jsonEncode(jsonList));
+  }
+
+  Future<void> _cargarHistorial() async {
+    final prefs = await SharedPreferences.getInstance();
+    final jsonString = prefs.getString('chat_historial');
+    if (jsonString == null) return;
+
+    final List<dynamic> jsonList = jsonDecode(jsonString);
+    historial = jsonList.map((e) => ChatMessageData.fromJson(e)).toList();
+
+    // Reconstruir la sesión en memoria
+    for (var msg in historial) {
+      if (msg.isImage) {
+        final imageBytes = File(msg.content).readAsBytesSync();
+        await chat.sendMessage(
+          Content.multi([DataPart('image/jpeg', imageBytes)]),
+        );
+      } else {
+        await chat.sendMessage(Content.text(msg.content));
+      }
+    }
+
+    setState(() {});
   }
 
   Future<void> _pickImage(ImageSource source) async {
@@ -70,6 +132,24 @@ class _ImagePickerScreenState extends State<ImagePickerScreen> {
         _aiResult = output;
         _isLoading = false;
       });
+      // Guardar en historial
+      historial.add(
+        ChatMessageData(
+          role: "user",
+          content: _imageFile!.path,
+          isImage: true,
+          timestamp: DateTime.now(),
+        ),
+      );
+      historial.add(
+        ChatMessageData(
+          role: "assistant",
+          content: output,
+          isImage: false,
+          timestamp: DateTime.now(),
+        ),
+      );
+      _guardarHistorial();
     } catch (e) {
       setState(() {
         _aiResult = "❌ Error al consultar Gemini:\n$e";
@@ -106,6 +186,34 @@ class _ImagePickerScreenState extends State<ImagePickerScreen> {
           _aiResult = output;
           _isLoading = false;
         });
+        // Guardar en historial
+        if (_imageFile != null) {
+          historial.add(
+            ChatMessageData(
+              role: "user",
+              content: _imageFile!.path,
+              isImage: true,
+              timestamp: DateTime.now(),
+            ),
+          );
+        }
+        historial.add(
+          ChatMessageData(
+            role: "user",
+            content: text,
+            isImage: false,
+            timestamp: DateTime.now(),
+          ),
+        );
+        historial.add(
+          ChatMessageData(
+            role: "assistant",
+            content: output,
+            isImage: false,
+            timestamp: DateTime.now(),
+          ),
+        );
+        _guardarHistorial();
       }
     } catch (e) {
       setState(() {
@@ -129,7 +237,7 @@ class _ImagePickerScreenState extends State<ImagePickerScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Analizador con IA')),
+      appBar: AppBar(title: const Text('')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -299,6 +407,7 @@ class _ImagePickerScreenState extends State<ImagePickerScreen> {
 
               const SizedBox(height: 20),
 
+            ],
               /// Input de texto + enviar y botón nueva imagen
               Row(
                 children: [
@@ -325,7 +434,6 @@ class _ImagePickerScreenState extends State<ImagePickerScreen> {
                   ),
                 ],
               ),
-            ],
           ],
         ),
       ),

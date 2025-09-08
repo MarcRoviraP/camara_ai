@@ -51,9 +51,20 @@ class _ImagePickerScreenState extends State<ImagePickerScreen> {
   int currentPromptIndex = 0;
   final TextEditingController _textController = TextEditingController();
   List<ChatMessageData> historial = [];
+  List<String> prompts = [
+  "Mira la imagen con atención: si contiene texto, destila sus mensajes principales y rescata las frases que marcan la diferencia. Si no hay letras a la vista, centra tu relato en los elementos visuales más claros y representativos, siempre con objetividad.",
+  
+  "Observa los productos en la escena y pinta con palabras lo que se ve: tipo, color, forma, material, marca, etiquetas o texto visible. Si el contexto lo permite y la certeza acompaña, añade detalles como precios aproximados o lugares donde podrían encontrarse. Si no, deja que lo esencial hable por sí mismo.",
+  
+  "Detente en los animales presentes en la imagen y describe sus rasgos visibles: tamaño, colores, forma, comportamiento. Cuando la certeza lo haga posible, revela su nombre común, el hábitat que los define y alguna curiosidad que los haga únicos. Si se prestan a la caza o pesca, señala el método más adecuado. Pero si la duda asoma, mejor guarda silencio en lugar de inventar.",
+  
+  "Explora el texto extraído de la imagen y desvela su intención: resume su propósito, marca su tono y define su tema central. Finalmente, sitúalo en su contexto: ¿es formal, publicitario, técnico o educativo?",
+];
+
 
   TextPart prompt = TextPart(
-    "Analiza detalladamente la imagen proporcionada. Si contiene texto, resume los mensajes principales...",
+    
+    "Analiza la imagen. Si tiene texto, resume los mensajes principales y cita frases clave. Si no, describe los elementos visuales, contexto e interpretaciones posibles de manera precisa y objetiva.",
   );
 
   final ImagePicker _picker = ImagePicker();
@@ -295,7 +306,7 @@ class _ImagePickerScreenState extends State<ImagePickerScreen> {
                           : null,
                       onPressed: () {
                         prompt = TextPart(
-                          "Analiza la imagen. Si tiene texto, resume los mensajes principales y cita frases clave. Si no, describe los elementos visuales, contexto e interpretaciones posibles de manera precisa y objetiva.",
+                          prompts[0],
                         );
                         setState(() {
                           currentPromptIndex = 0;
@@ -315,7 +326,7 @@ class _ImagePickerScreenState extends State<ImagePickerScreen> {
                           : null,
                       onPressed: () {
                         prompt = TextPart(
-                          "Identifica los productos en la imagen y describe sus características visibles (tipo, color, forma, material, marca, etiquetas, etc.) y cualquier texto. Si es posible, proporciona información adicional como precios estimados o tiendas. Si los productos no son claros, indícalo y sugiere una imagen más nítida. No adivines si no estás seguro.",
+                          prompts[1],
                         );
                         setState(() {
                           currentPromptIndex = 1;
@@ -335,7 +346,7 @@ class _ImagePickerScreenState extends State<ImagePickerScreen> {
                           : null,
                       onPressed: () {
                         prompt = TextPart(
-                          "Identifica los animales en la imagen y describe sus características (tipo, color, forma, tamaño, comportamiento, hábitat, etc.) y cualquier texto. Si reconoces alguno, agrega información relevante como nombres, hábitats o curiosidades. Indica si se puede cazar/pescar. Si no son claros, menciona que la imagen no permite identificar y sugiere otra más clara.",
+                          prompts[2],
                         );
                         setState(() {
                           currentPromptIndex = 2;
@@ -355,7 +366,7 @@ class _ImagePickerScreenState extends State<ImagePickerScreen> {
                           : null,
                       onPressed: () {
                         prompt = TextPart(
-                          "Analiza el texto extraído de la imagen. Explica su significado, propósito, contexto y términos importantes. Indica si es un documento formal, publicitario, técnico o educativo. Usa un lenguaje claro y estructurado.",
+                          prompts[3],
                         );
                         setState(() {
                           currentPromptIndex = 3;
@@ -379,7 +390,6 @@ class _ImagePickerScreenState extends State<ImagePickerScreen> {
               label: const Text('Buscar con IA'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Theme.of(context).colorScheme.onPrimary,
-                foregroundColor: Colors.white,
               ),
             ),
 
@@ -406,34 +416,34 @@ class _ImagePickerScreenState extends State<ImagePickerScreen> {
               MarkdownBody(data: _aiResult, selectable: true),
 
               const SizedBox(height: 20),
-
             ],
-              /// Input de texto + enviar y botón nueva imagen
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _textController,
-                      decoration: const InputDecoration(
-                        hintText: "Escribe un mensaje para continuar...",
-                      ),
+
+            /// Input de texto + enviar y botón nueva imagen
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _textController,
+                    decoration: const InputDecoration(
+                      hintText: "Haz una pregunta",
                     ),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.send),
-                    onPressed: () {
-                      final text = _textController.text;
-                      _textController.clear();
-                      if (text.isNotEmpty) _continueConversation(text);
-                    },
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.add_photo_alternate),
-                    tooltip: "Recargar imagen",
-                    onPressed: _refreshNewImage,
-                  ),
-                ],
-              ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.send),
+                  onPressed: () {
+                    final text = _textController.text;
+                    _textController.clear();
+                    if (text.isNotEmpty) _continueConversation(text);
+                  },
+                ),
+                IconButton(
+                  icon: const Icon(Icons.add_photo_alternate),
+                  tooltip: "Recargar imagen",
+                  onPressed: _refreshNewImage,
+                ),
+              ],
+            ),
           ],
         ),
       ),

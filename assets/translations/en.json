@@ -1,0 +1,15 @@
+{
+  "ImagePicker_ai_result": "AI result:",
+  "ImagePicker_ask_a_question": "Ask a question",
+  "ImagePicker_camara": "Cámara",
+  "ImagePicker_error_querying_gemini": "❌ Error when querying Gemini:",
+  "ImagePicker_gallery": "Gallery",
+  "ImagePicker_inspect_animals": "Inspect animals",
+  "ImagePicker_inspect_image": "Inspect image",
+  "ImagePicker_inspect_products": "Inspect products",
+  "ImagePicker_looking_for_text": "Searching text",
+  "ImagePicker_no_gemini_answer": "No answer from Gemini",
+  "ImagePicker_no_selected_image": "There's not selected an image",
+  "ImagePicker_reload_image": "Reload image",
+  "ImagePicker_searchin_with_ia": "Searching with AI"
+}

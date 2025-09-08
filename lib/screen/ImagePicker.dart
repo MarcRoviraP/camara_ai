@@ -1,3 +1,5 @@
+import 'package:camara_ai/generated/locale_keys.g.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -138,7 +140,7 @@ class _ImagePickerScreenState extends State<ImagePickerScreen> {
         Content.multi([prompt, imagePart]),
       );
 
-      final output = response.text ?? "No se obtuvo respuesta de Gemini.";
+      final output = response.text ?? LocaleKeys.ImagePicker_no_gemini_answer.tr();
       setState(() {
         _aiResult = output;
         _isLoading = false;
@@ -163,7 +165,7 @@ class _ImagePickerScreenState extends State<ImagePickerScreen> {
       _guardarHistorial();
     } catch (e) {
       setState(() {
-        _aiResult = "❌ Error al consultar Gemini:\n$e";
+        _aiResult = "${LocaleKeys.ImagePicker_error_querying_gemini.tr()}\n$e";
         _isLoading = false;
       });
     }
@@ -184,7 +186,7 @@ class _ImagePickerScreenState extends State<ImagePickerScreen> {
         final response = await chat.sendMessage(
           Content.multi([TextPart(text), imagePart]),
         );
-        final output = response.text ?? "⚠️ Sin respuesta de Gemini.";
+        final output = response.text ?? LocaleKeys.ImagePicker_no_gemini_answer.tr();
         setState(() {
           _aiResult = output;
           _isLoading = false;
@@ -192,7 +194,7 @@ class _ImagePickerScreenState extends State<ImagePickerScreen> {
       } else {
         // Si no hay imagen, solo envía el texto
         final response = await chat.sendMessage(Content.text(text));
-        final output = response.text ?? "⚠️ Sin respuesta de Gemini.";
+        final output = response.text ?? LocaleKeys.ImagePicker_no_gemini_answer.tr();
         setState(() {
           _aiResult = output;
           _isLoading = false;
@@ -228,7 +230,7 @@ class _ImagePickerScreenState extends State<ImagePickerScreen> {
       }
     } catch (e) {
       setState(() {
-        _aiResult = "❌ Error al continuar conversación:\n$e";
+        _aiResult = "${LocaleKeys.ImagePicker_error_querying_gemini.tr()}\n$e";
         _isLoading = false;
       });
     }
@@ -264,8 +266,8 @@ class _ImagePickerScreenState extends State<ImagePickerScreen> {
                         fit: BoxFit.cover,
                       ),
                     )
-                  : const Text(
-                      'No hay imagen seleccionada',
+                  :  Text(
+                      LocaleKeys.ImagePicker_no_selected_image.tr(),
                       style: TextStyle(fontSize: 18),
                     ),
             ),
@@ -278,12 +280,12 @@ class _ImagePickerScreenState extends State<ImagePickerScreen> {
                 ElevatedButton.icon(
                   onPressed: () => _pickImage(ImageSource.camera),
                   icon: const Icon(Icons.camera_alt),
-                  label: const Text('Cámara'),
+                  label: Text(LocaleKeys.ImagePicker_camara.tr()),
                 ),
                 ElevatedButton.icon(
                   onPressed: () => _pickImage(ImageSource.gallery),
                   icon: const Icon(Icons.photo_library),
-                  label: const Text('Galería'),
+                  label: Text(LocaleKeys.ImagePicker_gallery.tr()),
                 ),
               ],
             ),
@@ -313,7 +315,7 @@ class _ImagePickerScreenState extends State<ImagePickerScreen> {
                         });
                       },
                       icon: const Icon(Icons.image_search),
-                      label: const Text("Analizar imagen"),
+                      label:  Text(LocaleKeys.ImagePicker_inspect_image.tr()),
                     ),
                     const SizedBox(width: 10),
                     ElevatedButton.icon(
@@ -333,7 +335,7 @@ class _ImagePickerScreenState extends State<ImagePickerScreen> {
                         });
                       },
                       icon: const Icon(Icons.shopping_bag),
-                      label: const Text("Analizar productos"),
+                      label: Text(LocaleKeys.ImagePicker_inspect_products.tr()),
                     ),
                     const SizedBox(width: 10),
                     ElevatedButton.icon(
@@ -353,7 +355,7 @@ class _ImagePickerScreenState extends State<ImagePickerScreen> {
                         });
                       },
                       icon: const Icon(Icons.pets),
-                      label: const Text("Analizar animales"),
+                      label: Text(LocaleKeys.ImagePicker_inspect_animals.tr()),
                     ),
                     const SizedBox(width: 10),
                     ElevatedButton.icon(
@@ -373,7 +375,7 @@ class _ImagePickerScreenState extends State<ImagePickerScreen> {
                         });
                       },
                       icon: const Icon(Icons.text_snippet),
-                      label: const Text("Buscar texto"),
+                      label: Text(LocaleKeys.ImagePicker_looking_for_text.tr()),
                     ),
                   ],
                 ),
@@ -387,7 +389,7 @@ class _ImagePickerScreenState extends State<ImagePickerScreen> {
                   ? null
                   : _analyzeImageWithAI,
               icon: const Icon(Icons.search),
-              label: const Text('Buscar con IA'),
+              label: Text(LocaleKeys.ImagePicker_searchin_with_ia.tr()),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Theme.of(context).colorScheme.onPrimary,
               ),
@@ -405,10 +407,10 @@ class _ImagePickerScreenState extends State<ImagePickerScreen> {
 
             if (_aiResult.isNotEmpty) ...[
               const Divider(),
-              const Align(
+               Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  'Resultado IA:',
+                  LocaleKeys.ImagePicker_ai_result.tr(),
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ),
@@ -424,8 +426,8 @@ class _ImagePickerScreenState extends State<ImagePickerScreen> {
                 Expanded(
                   child: TextField(
                     controller: _textController,
-                    decoration: const InputDecoration(
-                      hintText: "Haz una pregunta",
+                    decoration:  InputDecoration(
+                      hintText: LocaleKeys.ImagePicker_ask_a_question.tr(),
                     ),
                   ),
                 ),
@@ -438,8 +440,8 @@ class _ImagePickerScreenState extends State<ImagePickerScreen> {
                   },
                 ),
                 IconButton(
-                  icon: const Icon(Icons.add_photo_alternate),
-                  tooltip: "Recargar imagen",
+                  icon:  Icon(Icons.add_photo_alternate),
+                  tooltip: LocaleKeys.ImagePicker_reload_image.tr(),
                   onPressed: _refreshNewImage,
                 ),
               ],
